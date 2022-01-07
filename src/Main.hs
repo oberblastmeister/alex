@@ -367,7 +367,7 @@ getMonadStrType s = case s of
   _ -> Nothing
   
 isUserState :: String -> Bool
-isUserState s = s == "monadUserState" || s == "monadUserState-byestring"
+isUserState s = s == "monadUserState" || s == "monadUserState-bytestring"
 
 -- inject some code, and add a {-# LINE #-} pragma at the top
 injectCode :: Maybe (AlexPosn,Code) -> FilePath -> Handle -> IO ()
