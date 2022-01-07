@@ -49,6 +49,7 @@ endif
 
 TESTS = \
         basic_typeclass.x \
+		basic_typeclass_text.x \
         basic_typeclass_bytestring.x \
         default_typeclass.x \
         gscan_typeclass.x \
@@ -96,7 +97,7 @@ ALL_TESTS = $(patsubst %.hs, %.run, $(ALL_TEST_HS))
 	./$<
 
 %$(HS_PROG_EXT) : %.hs
-	$(HC) $(HC_OPTS) -package array -package bytestring $($*_LD_OPTS) $< -o $@
+	$(HC) $(HC_OPTS) -package array -package bytestring -package text $($*_LD_OPTS) $< -o $@
 
 all :: $(ALL_TESTS)
 

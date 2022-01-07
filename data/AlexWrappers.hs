@@ -23,6 +23,14 @@ import qualified Data.ByteString          as ByteString
 import qualified Data.ByteString.Internal as ByteString hiding (ByteString)
 import qualified Data.ByteString.Unsafe   as ByteString
 
+#elif defined(ALEX_BASIC_TEXT)
+
+import qualified Data.Text.Lazy as Text
+import qualified Data.Text.Internal as Text.Internal
+import qualified Data.Text.Array as Text.Array
+
+-- add elif for strict text here
+
 #else
 
 import Data.Char (ord)
@@ -60,13 +68,10 @@ utf8Encode' c = case go (ord c) of
 
 #if defined(ALEX_BASIC_TEXT)
 
-import qualified Data.Text.Internal as Text.Internal
-import qualified Data.Text.Array as Text.Array
-
-newtype TextBytes = TextBytes Text
+newtype TextBytes = TextBytes Text.Internal.Text
 
 emptyTextBytes :: TextBytes
-emptyTextBytes = TextBytes T.empty
+emptyTextBytes = TextBytes Text.Internal.empty
 
 unconsByte :: TextBytes -> Maybe (Byte, TextBytes)
 unconsByte (TextBytes (Text.Internal.Text arr offset length)) =
@@ -74,19 +79,13 @@ unconsByte (TextBytes (Text.Internal.Text arr offset length)) =
     then Nothing
     else Just (Text.Array.unsafeIndex arr offset, TextBytes $ Text.Internal.Text arr (offset + 1) length)
 
-maybeTextSplitAt :: Int -> Text -> Maybe (Text, Text)
+maybeTextSplitAt :: Int -> Text.Text -> Maybe (Text.Text, Text.Text)
 maybeTextSplitAt i t
-  | T.null t = Nothing
-  | otherwise = Just $ T.splitAt i t
-  
-#endif
-  
-#if defined(ALEX_BASIC_TEXT)
-
-import qualified Data.Text as Text
+  | Text.null t = Nothing
+  | otherwise = Just $ Text.splitAt i t
 
 #endif
-
+  
 type Byte = Word8
 
 -- -----------------------------------------------------------------------------
@@ -380,7 +379,7 @@ alexGetByte (_,[],(c:s)) = case utf8Encode' c of
 #ifdef ALEX_BASIC_TEXT
 data AlexInput = AlexInput
   { alexTextBytes :: {-# UNPACK #-} !TextBytes,
-    alexText :: {-# UNPACK #-} !Text
+    alexText :: {-# UNPACK #-} !Text.Text
   }
 
 -- alexScanTokens :: Text.Text -> [token]
@@ -391,7 +390,7 @@ alexScanTokens str = go $ AlexInput emptyTextBytes str
         AlexEOF -> []
         AlexError _ -> error "lexical error"
         AlexSkip inp__' _ln -> go inp__'
-        AlexToken inp__' len act -> act (T.take len s) : go inp__'
+        AlexToken inp__' len act -> act (Text.take len s) : go inp__'
 
 alexGetByte :: AlexInput -> Maybe (Byte, AlexInput)
 alexGetByte (AlexInput bs t) =
@@ -399,7 +398,7 @@ alexGetByte (AlexInput bs t) =
     Just (b, bs) -> Just (b, AlexInput bs t)
     Nothing -> case maybeTextSplitAt 1 t of
       Just (t', t'') ->
-        let (b', bs') = fromJust $ unconsByte $ TextBytes t'
+        let (b', bs') = fromJust $ unconsByte $ TextBytes $ Text.toStrict t'
          in Just (b', AlexInput bs' t'')
       Nothing -> Nothing
 #endif
