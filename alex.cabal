@@ -149,4 +149,4 @@ test-suite tests
 
   default-language: Haskell98
 
-  build-depends: base, process
+  build-depends: base, process, text >= 2.0
