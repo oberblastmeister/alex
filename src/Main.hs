@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE PatternGuards #-}
 -- -----------------------------------------------------------------------------
 --
 -- Main.hs, part of Alex
@@ -289,14 +290,8 @@ getScheme directives =
                 dieAlex "%action directive not allowed with a wrapper"
               (Just _, Nothing, Nothing) ->
                 dieAlex "%typeclass directive without %token directive"
-          | single == "basic" || single == "basic-bytestring" ||
-            single == "strict-bytestring" ->
+          | Just strty <- getBasicStrType single ->
             let
-              strty = case single of
-                "basic" -> Str
-                "basic-bytestring" -> Lazy
-                "strict-bytestring" -> Strict
-                _ -> error "Impossible case"
             in case (typeclass, token, action) of
               (Nothing, Nothing, Nothing) ->
                 return Basic { basicStrType = strty,
@@ -311,42 +306,35 @@ getScheme directives =
                 dieAlex "%action directive not allowed with a wrapper"
               (Just _, Nothing, Nothing) ->
                 dieAlex "%typeclass directive without %token directive"
-          | single == "posn" || single == "posn-bytestring" ->
-            let
-              isByteString = single == "posn-bytestring"
-            in case (typeclass, token, action) of
+          | Just strty <- getPosnStrType single ->
+            case (typeclass, token, action) of
               (Nothing, Nothing, Nothing) ->
-                return Posn { posnByteString = isByteString,
+                return Posn { posnStrType = strty,
                               posnTypeInfo = Nothing }
               (Nothing, Just tokenty, Nothing) ->
-                return Posn { posnByteString = isByteString,
+                return Posn { posnStrType = strty,
                               posnTypeInfo = Just (Nothing, tokenty) }
               (Just _, Just tokenty, Nothing) ->
-                return Posn { posnByteString = isByteString,
+                return Posn { posnStrType = strty,
                               posnTypeInfo = Just (typeclass, tokenty) }
               (_, _, Just _) ->
                   dieAlex "%action directive not allowed with a wrapper"
               (Just _, Nothing, Nothing) ->
                 dieAlex "%typeclass directive without %token directive"
-          | single == "monad" || single == "monad-bytestring" ||
-            single == "monadUserState" ||
-            single == "monadUserState-bytestring" ->
+          | Just strty <- getMonadStrType single ->
             let
-              isByteString = single == "monad-bytestring" ||
-                             single == "monadUserState-bytestring"
-              userState = single == "monadUserState" ||
-                          single == "monadUserState-bytestring"
+              userState = isUserState single
             in case (typeclass, token, action) of
               (Nothing, Nothing, Nothing) ->
-                return Monad { monadByteString = isByteString,
+                return Monad { monadStrType = strty,
                                monadUserState = userState,
                                monadTypeInfo = Nothing }
               (Nothing, Just tokenty, Nothing) ->
-                return Monad { monadByteString = isByteString,
+                return Monad { monadStrType = strty,
                                monadUserState = userState,
                                monadTypeInfo = Just (Nothing, tokenty) }
               (Just _, Just tokenty, Nothing) ->
-                return Monad { monadByteString = isByteString,
+                return Monad { monadStrType = strty,
                                monadUserState = userState,
                                monadTypeInfo = Just (typeclass, tokenty) }
               (_, _, Just _) ->
@@ -355,6 +343,31 @@ getScheme directives =
                 dieAlex "%typeclass directive without %token directive"
           | otherwise -> dieAlex ("unknown wrapper type " ++ single)
         _many -> dieAlex "multiple %wrapper directives"
+
+getBasicStrType :: String -> Maybe StrType
+getBasicStrType s = case s of
+  "basic" -> Just Str
+  "basic-bytestring" -> Just LazyByteStr
+  "strict-bytestring" -> Just StrictByteStr
+  "basic-text" -> Just LazyText
+  _ -> Nothing
+  
+getPosnStrType :: String -> Maybe StrType
+getPosnStrType s = case s of
+  "posn" -> Just Str
+  "posn-bytestring" -> Just LazyByteStr
+  _ -> Nothing
+  
+getMonadStrType :: String -> Maybe StrType
+getMonadStrType s = case s of
+  "monad" -> Just Str
+  "monad-bytestring" -> Just LazyByteStr
+  "monadUserState" -> Just Str
+  "monadUserState-bytestring" -> Just LazyByteStr
+  _ -> Nothing
+  
+isUserState :: String -> Bool
+isUserState s = s == "monadUserState" || s == "monadUserState-byestring"
 
 -- inject some code, and add a {-# LINE #-} pragma at the top
 injectCode :: Maybe (AlexPosn,Code) -> FilePath -> Handle -> IO ()
